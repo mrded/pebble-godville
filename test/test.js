@@ -19,7 +19,7 @@ global.Pebble = {
 };
 
 // Load the companion app
-require('../pebble/src/js/pebble-js-app.js');
+require('../src/src/js/pebble-js-app.js');
 
 // Re-expose the module's sendDataToWatch via a direct call so we can test it.
 // We test it by inspecting what gets sent to Pebble.sendAppMessage.

@@ -2,7 +2,7 @@ FROM node:20-alpine
 
 WORKDIR /app
 
-COPY pebble/src/js/ pebble/src/js/
+COPY src/src/js/ src/src/js/
 COPY test/ test/
 
 CMD ["node", "test/test.js"]

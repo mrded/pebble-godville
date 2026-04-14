@@ -18,4 +18,4 @@ RUN pebble sdk install latest
 WORKDIR /app
 
 # Build command
-CMD ["sh", "-c", "cp package.json appinfo.json && pebble build"]
+CMD ["pebble", "build"]
