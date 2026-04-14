@@ -17,7 +17,8 @@ var Keys = {
 };
 
 function fetchHeroData() {
-  var godName = localStorage.getItem('godName');
+  // TODO: Remove default god name before release
+  var godName = localStorage.getItem('godName') || 'mrded';
   if (!godName) {
     console.log('No god name set. Configure the app first.');
     var errDict = {};

@@ -3,6 +3,15 @@
 var assert = require('assert');
 
 // Minimal stubs for Pebble JS environment
+global.XMLHttpRequest = function() {
+  this.open = function() {};
+  this.send = function() {};
+  this.onload = null;
+  this.onerror = null;
+  this.status = 0;
+  this.responseText = '';
+};
+
 global.localStorage = (function() {
   var store = {};
   return {
@@ -128,7 +137,7 @@ assert.strictEqual(localStorage.getItem('godName'), 'MyGod');
 assert.strictEqual(localStorage.getItem('heroName'), null);
 console.log('PASS: config uses godName key for API lookup');
 
-// Test: when godName is not set, fetchHeroData sends KEY_ERROR_MESSAGE to the watch
+// Test: when godName is not set in localStorage, the default 'mrded' is used (no error message)
 (function() {
   // Use a fresh localStorage store without a godName
   var origGet = localStorage.getItem;
@@ -140,12 +149,12 @@ console.log('PASS: config uses godName key for API lookup');
   try {
     var app = require('../src/src/js/pebble-js-app.js');
     app.fetchHeroData();
-    assert.strictEqual(sentMessages.length, 1);
-    assert.strictEqual(sentMessages[0][Keys.KEY_ERROR_MESSAGE], 'Set god name in Settings');
+    // Default 'mrded' is used — XHR is attempted, no error message is sent
+    assert.strictEqual(sentMessages.length, 0);
   } finally {
     localStorage.getItem = origGet;
   }
-  console.log('PASS: no god name sends error message to watch');
+  console.log('PASS: no god name in localStorage uses default "mrded", no error sent');
 })();
 
 // Test: long strings are truncated
