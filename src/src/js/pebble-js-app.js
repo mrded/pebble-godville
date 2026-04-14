@@ -12,13 +12,21 @@ var Keys = {
   KEY_HERO_QUEST: 7,
   KEY_HERO_QUEST_PROGRESS: 8,
   KEY_HERO_ACTIVITY: 9,
-  KEY_HERO_GODPOWER: 10
+  KEY_HERO_GODPOWER: 10,
+  KEY_ERROR_MESSAGE: 11
 };
 
 function fetchHeroData() {
   var godName = localStorage.getItem('godName');
   if (!godName) {
     console.log('No god name set. Configure the app first.');
+    var errDict = {};
+    errDict[Keys.KEY_ERROR_MESSAGE] = 'Set god name in Settings';
+    Pebble.sendAppMessage(errDict, function() {
+      console.log('Error message sent to Pebble');
+    }, function(error) {
+      console.log('Failed to send error message: ' + JSON.stringify(error));
+    });
     return;
   }
 
@@ -102,3 +110,7 @@ Pebble.addEventListener('webviewclosed', function(e) {
     }
   }
 });
+
+if (typeof module !== 'undefined') {
+  module.exports = { fetchHeroData: fetchHeroData };
+}

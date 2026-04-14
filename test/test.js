@@ -35,7 +35,8 @@ var Keys = {
   KEY_HERO_QUEST: 7,
   KEY_HERO_QUEST_PROGRESS: 8,
   KEY_HERO_ACTIVITY: 9,
-  KEY_HERO_GODPOWER: 10
+  KEY_HERO_GODPOWER: 10,
+  KEY_ERROR_MESSAGE: 11
 };
 
 // We replicate sendDataToWatch here to test the data-mapping logic
@@ -126,6 +127,26 @@ localStorage.setItem('godName', 'MyGod');
 assert.strictEqual(localStorage.getItem('godName'), 'MyGod');
 assert.strictEqual(localStorage.getItem('heroName'), null);
 console.log('PASS: config uses godName key for API lookup');
+
+// Test: when godName is not set, fetchHeroData sends KEY_ERROR_MESSAGE to the watch
+(function() {
+  // Use a fresh localStorage store without a godName
+  var origGet = localStorage.getItem;
+  localStorage.getItem = function(k) {
+    if (k === 'godName') { return null; }
+    return origGet.call(localStorage, k);
+  };
+  sentMessages = [];
+  try {
+    var app = require('../src/src/js/pebble-js-app.js');
+    app.fetchHeroData();
+    assert.strictEqual(sentMessages.length, 1);
+    assert.strictEqual(sentMessages[0][Keys.KEY_ERROR_MESSAGE], 'Set god name in Settings');
+  } finally {
+    localStorage.getItem = origGet;
+  }
+  console.log('PASS: no god name sends error message to watch');
+})();
 
 // Test: long strings are truncated
 sentMessages = [];

@@ -11,6 +11,7 @@
 #define KEY_HERO_QUEST_PROGRESS 8
 #define KEY_HERO_ACTIVITY       9
 #define KEY_HERO_GODPOWER       10
+#define KEY_ERROR_MESSAGE       11
 
 static Window *s_main_window;
 
@@ -53,6 +54,16 @@ static void tick_handler(struct tm *tick_time, TimeUnits units_changed) {
 }
 
 static void inbox_received_handler(DictionaryIterator *iter, void *context) {
+  Tuple *error_t = dict_find(iter, KEY_ERROR_MESSAGE);
+  if (error_t) {
+    snprintf(s_name_buf, sizeof(s_name_buf), "%s", error_t->value->cstring);
+    text_layer_set_text(s_name_layer, s_name_buf);
+    text_layer_set_text(s_level_class_layer, "");
+    text_layer_set_text(s_quest_layer, "");
+    text_layer_set_text(s_activity_layer, "");
+    return;
+  }
+
   Tuple *name_t       = dict_find(iter, KEY_HERO_NAME);
   Tuple *level_t      = dict_find(iter, KEY_HERO_LEVEL);
   Tuple *class_t      = dict_find(iter, KEY_HERO_CLASS);
