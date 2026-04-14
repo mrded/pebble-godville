@@ -26,7 +26,10 @@
   },
   "targetPlatforms": [
     "aplite",
-    "basalt"
+    "basalt",
+    "diorite",
+    "emery",
+    "flint"
   ],
   "sdkVersion": "3"
 }
