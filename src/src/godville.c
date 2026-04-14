@@ -13,6 +13,7 @@
 #define KEY_HERO_GODPOWER       10
 #define KEY_ERROR_MESSAGE       11
 #define KEY_HERO_ALIGNMENT      12
+#define BAR_LEN                  6  // width of Pokemon-style progress bars
 
 static Window *s_main_window;
 
@@ -37,15 +38,34 @@ static char s_activity_buf[128];
 static int s_health = 0, s_max_health = 0, s_exp = 0;
 static int s_gold = 0, s_godpower = 0;
 
+// Build a Pokemon-style progress bar: "######...." (BAR_LEN chars, # filled, . empty)
+static void build_bar(char *buf, int value, int max) {
+  if (max <= 0) max = 1;
+  int filled = (value * BAR_LEN) / max;
+  if (filled < 0) filled = 0;
+  if (filled > BAR_LEN) filled = BAR_LEN;
+  int i;
+  for (i = 0; i < filled; i++) buf[i] = '#';
+  for (; i < BAR_LEN; i++) buf[i] = '.';
+  buf[BAR_LEN] = '\0';
+}
+
 static void update_stats_layer(void) {
+  char hp_bar[BAR_LEN + 1];
+  int hp_pct = s_max_health > 0 ? (s_health * 100) / s_max_health : 0;
+  build_bar(hp_bar, s_health, s_max_health);
+  // Pokemon-style: HP[######]80% XP:42%
   snprintf(s_stats_buf, sizeof(s_stats_buf),
-           "HP:%d/%d  XP:%d%%", s_health, s_max_health, s_exp);
+           "HP[%s]%d%% XP:%d%%", hp_bar, hp_pct, s_exp);
   text_layer_set_text(s_stats_layer, s_stats_buf);
 }
 
 static void update_resources_layer(void) {
+  char gp_bar[BAR_LEN + 1];
+  build_bar(gp_bar, s_godpower, 100);
+  // Pokemon-style: G:1234 GP[######]
   snprintf(s_resources_buf, sizeof(s_resources_buf),
-           "G:%d  GP:%d%%", s_gold, s_godpower);
+           "G:%d GP[%s]", s_gold, gp_bar);
   text_layer_set_text(s_resources_layer, s_resources_buf);
 }
 
@@ -92,12 +112,15 @@ static void inbox_received_handler(DictionaryIterator *iter, void *context) {
 
   if (level_t && class_t) {
     if (s_alignment_buf[0]) {
+      // Pokemon-style status badge: first letter of alignment, uppercased
+      char align_letter = s_alignment_buf[0];
+      if (align_letter >= 'a' && align_letter <= 'z') align_letter -= 32;
       snprintf(s_level_class_buf, sizeof(s_level_class_buf),
-               "Lv %d %s (%s)", (int)level_t->value->int32,
-               class_t->value->cstring, s_alignment_buf);
+               "Lv.%d %s [%c]",
+               (int)level_t->value->int32, class_t->value->cstring, align_letter);
     } else {
       snprintf(s_level_class_buf, sizeof(s_level_class_buf),
-               "Lv %d %s", (int)level_t->value->int32, class_t->value->cstring);
+               "Lv.%d %s", (int)level_t->value->int32, class_t->value->cstring);
     }
     text_layer_set_text(s_level_class_layer, s_level_class_buf);
   }
