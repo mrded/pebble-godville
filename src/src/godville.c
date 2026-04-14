@@ -10,6 +10,7 @@
 #define KEY_HERO_QUEST        7
 #define KEY_HERO_QUEST_PROGRESS 8
 #define KEY_HERO_ACTIVITY     9
+#define KEY_HERO_GODPOWER     10
 
 static Window *s_main_window;
 
@@ -18,6 +19,7 @@ static TextLayer *s_level_class_layer;
 static TextLayer *s_health_layer;
 static TextLayer *s_exp_layer;
 static TextLayer *s_gold_layer;
+static TextLayer *s_godpower_layer;
 static TextLayer *s_quest_layer;
 static TextLayer *s_activity_layer;
 
@@ -26,6 +28,7 @@ static char s_level_class_buf[64];
 static char s_health_buf[32];
 static char s_exp_buf[32];
 static char s_gold_buf[32];
+static char s_godpower_buf[32];
 static char s_quest_buf[128];
 static char s_activity_buf[128];
 
@@ -40,6 +43,7 @@ static void inbox_received_handler(DictionaryIterator *iter, void *context) {
   Tuple *quest_t = dict_find(iter, KEY_HERO_QUEST);
   Tuple *quest_prog_t = dict_find(iter, KEY_HERO_QUEST_PROGRESS);
   Tuple *activity_t = dict_find(iter, KEY_HERO_ACTIVITY);
+  Tuple *godpower_t = dict_find(iter, KEY_HERO_GODPOWER);
 
   if (name_t) {
     snprintf(s_name_buf, sizeof(s_name_buf), "%s", name_t->value->cstring);
@@ -66,6 +70,11 @@ static void inbox_received_handler(DictionaryIterator *iter, void *context) {
   if (gold_t) {
     snprintf(s_gold_buf, sizeof(s_gold_buf), "Gold: %d", (int)gold_t->value->int32);
     text_layer_set_text(s_gold_layer, s_gold_buf);
+  }
+
+  if (godpower_t) {
+    snprintf(s_godpower_buf, sizeof(s_godpower_buf), "GP: %d%%", (int)godpower_t->value->int32);
+    text_layer_set_text(s_godpower_layer, s_godpower_buf);
   }
 
   if (quest_t && quest_prog_t) {
@@ -118,6 +127,11 @@ static void main_window_load(Window *window) {
   layer_add_child(window_layer, text_layer_get_layer(s_gold_layer));
   y += line_height;
 
+  s_godpower_layer = text_layer_create(GRect(2, y, width, line_height));
+  text_layer_set_font(s_godpower_layer, fonts_get_system_font(FONT_KEY_GOTHIC_14));
+  layer_add_child(window_layer, text_layer_get_layer(s_godpower_layer));
+  y += line_height;
+
   s_quest_layer = text_layer_create(GRect(2, y, width, line_height * 2));
   text_layer_set_font(s_quest_layer, fonts_get_system_font(FONT_KEY_GOTHIC_14));
   text_layer_set_overflow_mode(s_quest_layer, GTextOverflowModeWordWrap);
@@ -136,6 +150,7 @@ static void main_window_unload(Window *window) {
   text_layer_destroy(s_health_layer);
   text_layer_destroy(s_exp_layer);
   text_layer_destroy(s_gold_layer);
+  text_layer_destroy(s_godpower_layer);
   text_layer_destroy(s_quest_layer);
   text_layer_destroy(s_activity_layer);
 }

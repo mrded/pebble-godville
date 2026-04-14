@@ -34,7 +34,8 @@ var Keys = {
   KEY_HERO_GOLD: 6,
   KEY_HERO_QUEST: 7,
   KEY_HERO_QUEST_PROGRESS: 8,
-  KEY_HERO_ACTIVITY: 9
+  KEY_HERO_ACTIVITY: 9,
+  KEY_HERO_GODPOWER: 10
 };
 
 // We replicate sendDataToWatch here to test the data-mapping logic
@@ -52,6 +53,7 @@ function sendDataToWatch(data) {
   dict[Keys.KEY_HERO_QUEST] = (hero.quest || 'No quest').substring(0, 63);
   dict[Keys.KEY_HERO_QUEST_PROGRESS] = hero.quest_progress || 0;
   dict[Keys.KEY_HERO_ACTIVITY] = (hero.diary_last || '').substring(0, 127);
+  dict[Keys.KEY_HERO_GODPOWER] = hero.godpower || 0;
 
   Pebble.sendAppMessage(dict, function() {}, function() {});
 }
@@ -70,7 +72,8 @@ sendDataToWatch({
   gold_approx: 1234,
   quest: 'Slay the dragon',
   quest_progress: 75,
-  diary_last: 'Hero bravely ran away.'
+  diary_last: 'Hero bravely ran away.',
+  godpower: 50
 });
 assert.strictEqual(sentMessages.length, 1);
 var msg = sentMessages[0];
@@ -84,6 +87,7 @@ assert.strictEqual(msg[Keys.KEY_HERO_GOLD], 1234);
 assert.strictEqual(msg[Keys.KEY_HERO_QUEST], 'Slay the dragon');
 assert.strictEqual(msg[Keys.KEY_HERO_QUEST_PROGRESS], 75);
 assert.strictEqual(msg[Keys.KEY_HERO_ACTIVITY], 'Hero bravely ran away.');
+assert.strictEqual(msg[Keys.KEY_HERO_GODPOWER], 50);
 console.log('PASS: flat API response mapped correctly');
 
 // Test: nested API response { hero: { ... } }
@@ -114,7 +118,14 @@ assert.strictEqual(sentMessages[0][Keys.KEY_HERO_NAME], 'Unknown');
 assert.strictEqual(sentMessages[0][Keys.KEY_HERO_LEVEL], 0);
 assert.strictEqual(sentMessages[0][Keys.KEY_HERO_QUEST], 'No quest');
 assert.strictEqual(sentMessages[0][Keys.KEY_HERO_ACTIVITY], '');
+assert.strictEqual(sentMessages[0][Keys.KEY_HERO_GODPOWER], 0);
 console.log('PASS: missing fields use defaults');
+
+// Test: godName is used as the API lookup key (not heroName)
+localStorage.setItem('godName', 'MyGod');
+assert.strictEqual(localStorage.getItem('godName'), 'MyGod');
+assert.strictEqual(localStorage.getItem('heroName'), null);
+console.log('PASS: config uses godName key for API lookup');
 
 // Test: long strings are truncated
 sentMessages = [];

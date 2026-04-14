@@ -18,7 +18,8 @@
     "KEY_HERO_GOLD": 6,
     "KEY_HERO_QUEST": 7,
     "KEY_HERO_QUEST_PROGRESS": 8,
-    "KEY_HERO_ACTIVITY": 9
+    "KEY_HERO_ACTIVITY": 9,
+    "KEY_HERO_GODPOWER": 10
   },
   "resources": {
     "media": []

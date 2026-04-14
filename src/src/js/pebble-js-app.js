@@ -11,17 +11,18 @@ var Keys = {
   KEY_HERO_GOLD: 6,
   KEY_HERO_QUEST: 7,
   KEY_HERO_QUEST_PROGRESS: 8,
-  KEY_HERO_ACTIVITY: 9
+  KEY_HERO_ACTIVITY: 9,
+  KEY_HERO_GODPOWER: 10
 };
 
 function fetchHeroData() {
-  var heroName = localStorage.getItem('heroName');
-  if (!heroName) {
-    console.log('No hero name set. Configure the app first.');
+  var godName = localStorage.getItem('godName');
+  if (!godName) {
+    console.log('No god name set. Configure the app first.');
     return;
   }
 
-  var url = GODVILLE_API_URL + encodeURIComponent(heroName) + '.json';
+  var url = GODVILLE_API_URL + encodeURIComponent(godName) + '.json';
 
   var xhr = new XMLHttpRequest();
   xhr.open('GET', url, true);
@@ -57,6 +58,7 @@ function sendDataToWatch(data) {
   dict[Keys.KEY_HERO_QUEST] = (hero.quest || 'No quest').substring(0, 63);
   dict[Keys.KEY_HERO_QUEST_PROGRESS] = hero.quest_progress || 0;
   dict[Keys.KEY_HERO_ACTIVITY] = (hero.diary_last || '').substring(0, 127);
+  dict[Keys.KEY_HERO_GODPOWER] = hero.godpower || 0;
 
   Pebble.sendAppMessage(dict, function() {
     console.log('Data sent to Pebble successfully');
@@ -72,14 +74,14 @@ Pebble.addEventListener('ready', function() {
 });
 
 Pebble.addEventListener('showConfiguration', function() {
-  var heroName = localStorage.getItem('heroName') || '';
+  var godName = localStorage.getItem('godName') || '';
   var configUrl = 'data:text/html,' + encodeURIComponent(
     '<html><body>' +
-    '<h3>Godville Hero</h3>' +
-    '<label>Hero name: <input id="name" value="' + heroName + '"></label><br><br>' +
+    '<h3>Godville</h3>' +
+    '<label>God name: <input id="name" value="' + godName + '"></label><br><br>' +
     '<button onclick="' +
       'var n=document.getElementById(\'name\').value;' +
-      'location.href=\'pebblejs://close#\'+encodeURIComponent(JSON.stringify({heroName:n}));' +
+      'location.href=\'pebblejs://close#\'+encodeURIComponent(JSON.stringify({godName:n}));' +
     '">Save</button>' +
     '</body></html>'
   );
@@ -90,9 +92,9 @@ Pebble.addEventListener('webviewclosed', function(e) {
   if (e.response) {
     try {
       var config = JSON.parse(decodeURIComponent(e.response));
-      if (config.heroName) {
-        localStorage.setItem('heroName', config.heroName);
-        console.log('Hero name saved: ' + config.heroName);
+      if (config.godName) {
+        localStorage.setItem('godName', config.godName);
+        console.log('God name saved: ' + config.godName);
         fetchHeroData();
       }
     } catch (err) {
