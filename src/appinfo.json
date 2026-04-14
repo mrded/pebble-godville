@@ -19,7 +19,9 @@
     "KEY_HERO_QUEST": 7,
     "KEY_HERO_QUEST_PROGRESS": 8,
     "KEY_HERO_ACTIVITY": 9,
-    "KEY_HERO_GODPOWER": 10
+    "KEY_HERO_GODPOWER": 10,
+    "KEY_ERROR_MESSAGE": 11,
+    "KEY_HERO_ALIGNMENT": 12
   },
   "resources": {
     "media": []

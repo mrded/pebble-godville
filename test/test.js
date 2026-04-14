@@ -45,7 +45,8 @@ var Keys = {
   KEY_HERO_QUEST_PROGRESS: 8,
   KEY_HERO_ACTIVITY: 9,
   KEY_HERO_GODPOWER: 10,
-  KEY_ERROR_MESSAGE: 11
+  KEY_ERROR_MESSAGE: 11,
+  KEY_HERO_ALIGNMENT: 12
 };
 
 // We replicate sendDataToWatch here to test the data-mapping logic
@@ -64,6 +65,7 @@ function sendDataToWatch(data) {
   dict[Keys.KEY_HERO_QUEST_PROGRESS] = hero.quest_progress || 0;
   dict[Keys.KEY_HERO_ACTIVITY] = (hero.diary_last || '').substring(0, 127);
   dict[Keys.KEY_HERO_GODPOWER] = hero.godpower || 0;
+  dict[Keys.KEY_HERO_ALIGNMENT] = (hero.alignment || '').substring(0, 31);
 
   Pebble.sendAppMessage(dict, function() {}, function() {});
 }
@@ -83,7 +85,8 @@ sendDataToWatch({
   quest: 'Slay the dragon',
   quest_progress: 75,
   diary_last: 'Hero bravely ran away.',
-  godpower: 50
+  godpower: 50,
+  alignment: 'neutral'
 });
 assert.strictEqual(sentMessages.length, 1);
 var msg = sentMessages[0];
@@ -98,6 +101,7 @@ assert.strictEqual(msg[Keys.KEY_HERO_QUEST], 'Slay the dragon');
 assert.strictEqual(msg[Keys.KEY_HERO_QUEST_PROGRESS], 75);
 assert.strictEqual(msg[Keys.KEY_HERO_ACTIVITY], 'Hero bravely ran away.');
 assert.strictEqual(msg[Keys.KEY_HERO_GODPOWER], 50);
+assert.strictEqual(msg[Keys.KEY_HERO_ALIGNMENT], 'neutral');
 console.log('PASS: flat API response mapped correctly');
 
 // Test: nested API response { hero: { ... } }
@@ -129,6 +133,7 @@ assert.strictEqual(sentMessages[0][Keys.KEY_HERO_LEVEL], 0);
 assert.strictEqual(sentMessages[0][Keys.KEY_HERO_QUEST], 'No quest');
 assert.strictEqual(sentMessages[0][Keys.KEY_HERO_ACTIVITY], '');
 assert.strictEqual(sentMessages[0][Keys.KEY_HERO_GODPOWER], 0);
+assert.strictEqual(sentMessages[0][Keys.KEY_HERO_ALIGNMENT], '');
 console.log('PASS: missing fields use defaults');
 
 // Test: godName is used as the API lookup key (not heroName)
@@ -157,13 +162,24 @@ console.log('PASS: config uses godName key for API lookup');
   console.log('PASS: no god name in localStorage uses default "mrded", no error sent');
 })();
 
+// Test: alignment is sent correctly
+sentMessages = [];
+sendDataToWatch({ alignment: 'good' });
+assert.strictEqual(sentMessages[0][Keys.KEY_HERO_ALIGNMENT], 'good');
+sendDataToWatch({ alignment: 'evil' });
+assert.strictEqual(sentMessages[1][Keys.KEY_HERO_ALIGNMENT], 'evil');
+sendDataToWatch({ alignment: 'neutral' });
+assert.strictEqual(sentMessages[2][Keys.KEY_HERO_ALIGNMENT], 'neutral');
+console.log('PASS: alignment values sent correctly');
+
 // Test: long strings are truncated
 sentMessages = [];
 var longString = 'x'.repeat(200);
-sendDataToWatch({ name: longString, quest: longString, diary_last: longString });
+sendDataToWatch({ name: longString, quest: longString, diary_last: longString, alignment: longString });
 assert.strictEqual(sentMessages[0][Keys.KEY_HERO_NAME].length, 63);
 assert.strictEqual(sentMessages[0][Keys.KEY_HERO_QUEST].length, 63);
 assert.strictEqual(sentMessages[0][Keys.KEY_HERO_ACTIVITY].length, 127);
+assert.strictEqual(sentMessages[0][Keys.KEY_HERO_ALIGNMENT].length, 31);
 console.log('PASS: long strings are truncated to field limits');
 
 console.log('\nAll tests passed.');

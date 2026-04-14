@@ -12,6 +12,7 @@
 #define KEY_HERO_ACTIVITY       9
 #define KEY_HERO_GODPOWER       10
 #define KEY_ERROR_MESSAGE       11
+#define KEY_HERO_ALIGNMENT      12
 
 static Window *s_main_window;
 
@@ -25,7 +26,8 @@ static TextLayer *s_activity_layer;
 
 static char s_time_buf[8];
 static char s_name_buf[64];
-static char s_level_class_buf[64];
+static char s_level_class_buf[80]; // "Lv NNN ClassName (alignment)" + null
+static char s_alignment_buf[32];
 static char s_stats_buf[48];
 static char s_resources_buf[48];
 static char s_quest_buf[128];
@@ -75,15 +77,28 @@ static void inbox_received_handler(DictionaryIterator *iter, void *context) {
   Tuple *quest_prog_t = dict_find(iter, KEY_HERO_QUEST_PROGRESS);
   Tuple *activity_t   = dict_find(iter, KEY_HERO_ACTIVITY);
   Tuple *godpower_t   = dict_find(iter, KEY_HERO_GODPOWER);
+  Tuple *alignment_t  = dict_find(iter, KEY_HERO_ALIGNMENT);
 
   if (name_t) {
     snprintf(s_name_buf, sizeof(s_name_buf), "%s", name_t->value->cstring);
     text_layer_set_text(s_name_layer, s_name_buf);
   }
 
+  if (alignment_t) {
+    snprintf(s_alignment_buf, sizeof(s_alignment_buf), "%s", alignment_t->value->cstring);
+  } else {
+    s_alignment_buf[0] = '\0';
+  }
+
   if (level_t && class_t) {
-    snprintf(s_level_class_buf, sizeof(s_level_class_buf),
-             "Lv %d %s", (int)level_t->value->int32, class_t->value->cstring);
+    if (s_alignment_buf[0]) {
+      snprintf(s_level_class_buf, sizeof(s_level_class_buf),
+               "Lv %d %s (%s)", (int)level_t->value->int32,
+               class_t->value->cstring, s_alignment_buf);
+    } else {
+      snprintf(s_level_class_buf, sizeof(s_level_class_buf),
+               "Lv %d %s", (int)level_t->value->int32, class_t->value->cstring);
+    }
     text_layer_set_text(s_level_class_layer, s_level_class_buf);
   }
 

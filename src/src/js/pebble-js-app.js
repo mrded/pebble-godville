@@ -13,7 +13,8 @@ var Keys = {
   KEY_HERO_QUEST_PROGRESS: 8,
   KEY_HERO_ACTIVITY: 9,
   KEY_HERO_GODPOWER: 10,
-  KEY_ERROR_MESSAGE: 11
+  KEY_ERROR_MESSAGE: 11,
+  KEY_HERO_ALIGNMENT: 12
 };
 
 function fetchHeroData() {
@@ -68,6 +69,7 @@ function sendDataToWatch(data) {
   dict[Keys.KEY_HERO_QUEST_PROGRESS] = hero.quest_progress || 0;
   dict[Keys.KEY_HERO_ACTIVITY] = (hero.diary_last || '').substring(0, 127);
   dict[Keys.KEY_HERO_GODPOWER] = hero.godpower || 0;
+  dict[Keys.KEY_HERO_ALIGNMENT] = (hero.alignment || '').substring(0, 31);
 
   Pebble.sendAppMessage(dict, function() {
     console.log('Data sent to Pebble successfully');
@@ -113,5 +115,5 @@ Pebble.addEventListener('webviewclosed', function(e) {
 });
 
 if (typeof module !== 'undefined') {
-  module.exports = { fetchHeroData: fetchHeroData };
+  module.exports = { fetchHeroData: fetchHeroData, sendDataToWatch: sendDataToWatch };
 }
