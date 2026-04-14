@@ -1,0 +1,31 @@
+{
+  "uuid": "4cf59414-1de7-4e50-88ba-31a7c0a97b2c",
+  "shortName": "Godville",
+  "longName": "Godville",
+  "companyName": "mrded",
+  "versionCode": 1,
+  "versionLabel": "1.0",
+  "watchapp": {
+    "watchface": false
+  },
+  "appKeys": {
+    "KEY_HERO_NAME": 0,
+    "KEY_HERO_LEVEL": 1,
+    "KEY_HERO_CLASS": 2,
+    "KEY_HERO_HEALTH": 3,
+    "KEY_HERO_MAX_HEALTH": 4,
+    "KEY_HERO_EXP": 5,
+    "KEY_HERO_GOLD": 6,
+    "KEY_HERO_QUEST": 7,
+    "KEY_HERO_QUEST_PROGRESS": 8,
+    "KEY_HERO_ACTIVITY": 9
+  },
+  "resources": {
+    "media": []
+  },
+  "targetPlatforms": [
+    "aplite",
+    "basalt"
+  ],
+  "sdkVersion": "3"
+}

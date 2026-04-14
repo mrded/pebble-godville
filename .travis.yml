@@ -1,0 +1,24 @@
+language: c
+
+sudo: false
+
+env:
+  - PEBBLE_SDK_VERSION=3.13.1
+
+before_install:
+  - wget https://binaries.getpebble.com/pebble-tool/pebble-sdk-${PEBBLE_SDK_VERSION}-linux64.tar.bz2
+  - tar -xjf pebble-sdk-${PEBBLE_SDK_VERSION}-linux64.tar.bz2 -C $HOME
+  - export PATH="$HOME/pebble-sdk-${PEBBLE_SDK_VERSION}-linux64/bin:$PATH"
+  - pip install --user virtualenv
+  - pebble sdk install ${PEBBLE_SDK_VERSION}
+
+script:
+  - pebble build
+
+deploy:
+  provider: releases
+  api_key: $GITHUB_TOKEN
+  file: build/godville.pbw
+  skip_cleanup: true
+  on:
+    tags: true

@@ -1,0 +1,4 @@
+build/
+.pebble-linked-sdk
+*.pbw
+*.pbz
