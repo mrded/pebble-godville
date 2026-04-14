@@ -2,4 +2,4 @@ FROM rebble/pebble-sdk:latest
 
 WORKDIR /app
 
-CMD ["pebble", "build"]
+CMD sh -c "cp package.json appinfo.json && pebble build"

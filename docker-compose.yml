@@ -1,4 +1,4 @@
 services:
   test:
     build: .
-    command: echo "Tests passed"
+    command: node test/test.js

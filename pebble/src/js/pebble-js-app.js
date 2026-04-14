@@ -56,7 +56,7 @@ function sendDataToWatch(data) {
   dict[Keys.KEY_HERO_GOLD] = hero.gold_approx || 0;
   dict[Keys.KEY_HERO_QUEST] = (hero.quest || 'No quest').substring(0, 63);
   dict[Keys.KEY_HERO_QUEST_PROGRESS] = hero.quest_progress || 0;
-  dict[Keys.KEY_HERO_ACTIVITY] = (hero.diary_last || hero.activatable || '').substring(0, 127);
+  dict[Keys.KEY_HERO_ACTIVITY] = (hero.diary_last || '').substring(0, 127);
 
   Pebble.sendAppMessage(dict, function() {
     console.log('Data sent to Pebble successfully');
