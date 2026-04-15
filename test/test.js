@@ -40,6 +40,7 @@ var app = require('../src/src/js/pebble-js-app.js');
 var sendDataToWatch = app.sendDataToWatch;
 var fetchHeroData = app.fetchHeroData;
 var GODVILLE_REALMS = app.GODVILLE_REALMS;
+var htmlEscape = app.htmlEscape;
 
 var Keys = {
   KEY_HERO_NAME: 0,
@@ -352,5 +353,30 @@ console.log('PASS: absent realm key defaults to godvillegame.com (English)');
 
 // Restore realm for subsequent tests
 localStorage.setItem('realm', 'en');
+
+// ---- htmlEscape tests ----
+
+// Test: special HTML characters are escaped
+assert.strictEqual(htmlEscape('&'), '&amp;');
+assert.strictEqual(htmlEscape('"'), '&quot;');
+assert.strictEqual(htmlEscape("'"), '&#39;');
+assert.strictEqual(htmlEscape('<'), '&lt;');
+assert.strictEqual(htmlEscape('>'), '&gt;');
+console.log('PASS: htmlEscape escapes individual special characters');
+
+// Test: a god name with special chars cannot break out of the value attribute
+var dangerous = 'x" onmouseover="alert(1)';
+var escaped = htmlEscape(dangerous);
+assert.ok(escaped.indexOf('"') === -1, 'double quotes should be escaped');
+assert.ok(escaped.indexOf('&quot;') !== -1, 'double quotes should become &quot;');
+console.log('PASS: htmlEscape prevents attribute injection');
+
+// Test: plain names are returned unchanged
+assert.strictEqual(htmlEscape('mrded'), 'mrded');
+assert.strictEqual(htmlEscape(''), '');
+// Test: null/undefined inputs are handled gracefully
+assert.strictEqual(htmlEscape(null), '');
+assert.strictEqual(htmlEscape(undefined), '');
+console.log('PASS: htmlEscape leaves plain strings unchanged and handles null/undefined');
 
 console.log('\nAll tests passed.');

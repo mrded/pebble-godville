@@ -28,6 +28,15 @@ var Keys = {
   KEY_HERO_ARENA_FIGHT: 20
 };
 
+function htmlEscape(str) {
+  return String(str == null ? '' : str)
+    .replace(/&/g, '&amp;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
+
 function sendError(message) {
   var errDict = {};
   errDict[Keys.KEY_ERROR_MESSAGE] = message;
@@ -120,7 +129,7 @@ Pebble.addEventListener('showConfiguration', function() {
   var configUrl = 'data:text/html,' + encodeURIComponent(
     '<html><body>' +
     '<h3>Godville</h3>' +
-    '<label>God name: <input id="name" value="' + godName + '"></label><br><br>' +
+    '<label>God name: <input id="name" value="' + htmlEscape(godName) + '"></label><br><br>' +
     '<label>Realm: <select id="realm">' +
       '<option value="en"' + (realm === 'en' ? ' selected' : '') + '>English (godvillegame.com)</option>' +
       '<option value="ru"' + (realm === 'ru' ? ' selected' : '') + '>Russian (godville.net)</option>' +
@@ -160,5 +169,5 @@ Pebble.addEventListener('webviewclosed', function(e) {
 });
 
 if (typeof module !== 'undefined') {
-  module.exports = { fetchHeroData: fetchHeroData, sendDataToWatch: sendDataToWatch, GODVILLE_REALMS: GODVILLE_REALMS };
+  module.exports = { fetchHeroData: fetchHeroData, sendDataToWatch: sendDataToWatch, GODVILLE_REALMS: GODVILLE_REALMS, htmlEscape: htmlEscape };
 }
