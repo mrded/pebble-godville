@@ -135,7 +135,7 @@ assert.strictEqual(localStorage.getItem('godName'), 'MyGod');
 assert.strictEqual(localStorage.getItem('heroName'), null);
 console.log('PASS: config uses godName key for API lookup');
 
-// Test: when godName is not set in localStorage, sendError is called (no XHR)
+// Test: when godName is not set in localStorage, the default 'mrded' is used (no error message)
 (function() {
   // Use a fresh localStorage store without a godName
   var origGet = localStorage.getItem;
@@ -146,16 +146,12 @@ console.log('PASS: config uses godName key for API lookup');
   sentMessages = [];
   try {
     fetchHeroData();
-    // No godName — error is sent to watch, no XHR
-    assert.strictEqual(sentMessages.length, 1);
-    assert.ok(
-      Object.prototype.hasOwnProperty.call(sentMessages[0], Keys.KEY_ERROR_MESSAGE),
-      'Expected error message key in sent message'
-    );
+    // Default 'mrded' is used — XHR is attempted, no error message is sent
+    assert.strictEqual(sentMessages.length, 0);
   } finally {
     localStorage.getItem = origGet;
   }
-  console.log('PASS: no god name in localStorage sends error to watch');
+  console.log('PASS: no god name in localStorage uses default "mrded", no error sent');
 })();
 
 // Test: long strings are truncated
