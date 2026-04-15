@@ -25,18 +25,22 @@ var Keys = {
   KEY_HERO_ARENA_FIGHT: 20
 };
 
+function sendError(message) {
+  var errDict = {};
+  errDict[Keys.KEY_ERROR_MESSAGE] = message;
+  Pebble.sendAppMessage(errDict, function() {
+    console.log('Error message sent to Pebble');
+  }, function(error) {
+    console.log('Failed to send error message: ' + JSON.stringify(error));
+  });
+}
+
 function fetchHeroData() {
   // TODO: Remove default god name before release
   var godName = localStorage.getItem('godName') || 'mrded';
   if (!godName) {
     console.log('No god name set. Configure the app first.');
-    var errDict = {};
-    errDict[Keys.KEY_ERROR_MESSAGE] = 'Set god name in Settings';
-    Pebble.sendAppMessage(errDict, function() {
-      console.log('Error message sent to Pebble');
-    }, function(error) {
-      console.log('Failed to send error message: ' + JSON.stringify(error));
-    });
+    sendError('Set god name in Settings');
     return;
   }
 
@@ -51,13 +55,16 @@ function fetchHeroData() {
         sendDataToWatch(data);
       } catch (e) {
         console.log('Failed to parse Godville API response: ' + e);
+        sendError('Invalid API response');
       }
     } else {
       console.log('Godville API request failed: ' + xhr.status);
+      sendError('API error: ' + xhr.status);
     }
   };
   xhr.onerror = function() {
     console.log('Network error when fetching Godville data');
+    sendError('Network error');
   };
   xhr.send();
 }
@@ -133,5 +140,5 @@ Pebble.addEventListener('webviewclosed', function(e) {
 });
 
 if (typeof module !== 'undefined') {
-  module.exports = { fetchHeroData: fetchHeroData };
+  module.exports = { fetchHeroData: fetchHeroData, sendDataToWatch: sendDataToWatch };
 }

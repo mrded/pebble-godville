@@ -3,7 +3,11 @@
 var assert = require('assert');
 
 // Minimal stubs for Pebble JS environment
+
+// XHR mock that captures the last instance so tests can trigger callbacks
+var lastXHR = null;
 global.XMLHttpRequest = function() {
+  lastXHR = this;
   this.open = function() {};
   this.send = function() {};
   this.onload = null;
@@ -27,11 +31,10 @@ global.Pebble = {
   openURL: function() {}
 };
 
-// Load the companion app
-require('../src/src/js/pebble-js-app.js');
-
-// Re-expose the module's sendDataToWatch via a direct call so we can test it.
-// We test it by inspecting what gets sent to Pebble.sendAppMessage.
+// Load the companion app and get the exports
+var app = require('../src/src/js/pebble-js-app.js');
+var sendDataToWatch = app.sendDataToWatch;
+var fetchHeroData = app.fetchHeroData;
 
 var Keys = {
   KEY_HERO_NAME: 0,
@@ -56,37 +59,6 @@ var Keys = {
   KEY_HERO_DISTANCE: 19,
   KEY_HERO_ARENA_FIGHT: 20
 };
-
-// We replicate sendDataToWatch here to test the data-mapping logic
-function sendDataToWatch(data) {
-  var hero = data.hero || data;
-
-  var dict = {};
-  dict[Keys.KEY_HERO_NAME]           = (hero.name || 'Unknown').substring(0, 63);
-  dict[Keys.KEY_HERO_LEVEL]          = hero.level || 0;
-  dict[Keys.KEY_HERO_CLASS]          = (hero.klass || hero['class'] || '').substring(0, 63);
-  dict[Keys.KEY_HERO_HEALTH]         = hero.health || 0;
-  dict[Keys.KEY_HERO_MAX_HEALTH]     = hero.max_health || 0;
-  dict[Keys.KEY_HERO_EXP]            = hero.exp_progress || 0;
-  dict[Keys.KEY_HERO_GOLD]           = hero.gold_approx || 0;
-  dict[Keys.KEY_HERO_QUEST]          = (hero.quest || 'No quest').substring(0, 63);
-  dict[Keys.KEY_HERO_QUEST_PROGRESS] = hero.quest_progress || 0;
-  dict[Keys.KEY_HERO_ACTIVITY]       = (hero.diary_last || '').substring(0, 127);
-  dict[Keys.KEY_HERO_GODPOWER]       = hero.godpower || 0;
-
-  // Stage inference fields
-  dict[Keys.KEY_HERO_HAS_PET]              = hero.pet ? 1 : 0;
-  dict[Keys.KEY_HERO_HAS_BRICKS]           = (hero.bricks_cnt > 0) ? 1 : 0;
-  dict[Keys.KEY_HERO_HAS_TEMPLE_COMPLETED] = hero.temple_completed_at ? 1 : 0;
-  dict[Keys.KEY_HERO_HAS_WOOD]             = (hero.wood_cnt > 0) ? 1 : 0;
-  dict[Keys.KEY_HERO_HAS_ARK_COMPLETED]    = hero.ark_completed_at ? 1 : 0;
-  dict[Keys.KEY_HERO_HAS_SAVINGS]          = (hero.savings > 0) ? 1 : 0;
-  dict[Keys.KEY_HERO_TOWN_NAME]            = (hero.town_name || '').substring(0, 63);
-  dict[Keys.KEY_HERO_DISTANCE]             = hero.distance || 0;
-  dict[Keys.KEY_HERO_ARENA_FIGHT]          = hero.arena_fight ? 1 : 0;
-
-  Pebble.sendAppMessage(dict, function() {}, function() {});
-}
 
 // ---- Tests ----
 
@@ -167,8 +139,7 @@ console.log('PASS: config uses godName key for API lookup');
   };
   sentMessages = [];
   try {
-    var app = require('../src/src/js/pebble-js-app.js');
-    app.fetchHeroData();
+    fetchHeroData();
     // Default 'mrded' is used — XHR is attempted, no error message is sent
     assert.strictEqual(sentMessages.length, 0);
   } finally {
@@ -241,5 +212,89 @@ assert.strictEqual(sentMessages[0][Keys.KEY_HERO_TOWN_NAME], '');
 assert.strictEqual(sentMessages[0][Keys.KEY_HERO_DISTANCE], 0);
 assert.strictEqual(sentMessages[0][Keys.KEY_HERO_ARENA_FIGHT], 0);
 console.log('PASS: all stage/activity fields default to falsy when absent');
+
+// ---- fetchHeroData error-handling tests ----
+// These verify the watch is never left stuck on "Loading..." when the API fails.
+
+localStorage.setItem('godName', 'TestGod');
+
+// Test: non-200 HTTP status sends an error message to the watch
+sentMessages = [];
+fetchHeroData();
+lastXHR.status = 404;
+lastXHR.onload();
+assert.strictEqual(sentMessages.length, 1);
+assert.ok(sentMessages[0][Keys.KEY_ERROR_MESSAGE], 'expected error message for 404');
+assert.ok(sentMessages[0][Keys.KEY_ERROR_MESSAGE].indexOf('404') !== -1,
+  'error message should include status code');
+console.log('PASS: HTTP 404 response sends error message to watch');
+
+// Test: network error sends an error message to the watch
+sentMessages = [];
+fetchHeroData();
+lastXHR.onerror();
+assert.strictEqual(sentMessages.length, 1);
+assert.ok(sentMessages[0][Keys.KEY_ERROR_MESSAGE], 'expected error message for network error');
+console.log('PASS: network error sends error message to watch');
+
+// Test: invalid JSON response sends an error message to the watch
+sentMessages = [];
+fetchHeroData();
+lastXHR.status = 200;
+lastXHR.responseText = 'not valid json {{{';
+lastXHR.onload();
+assert.strictEqual(sentMessages.length, 1);
+assert.ok(sentMessages[0][Keys.KEY_ERROR_MESSAGE], 'expected error message for invalid JSON');
+console.log('PASS: invalid JSON response sends error message to watch');
+
+// Test: valid 200 response with hero data sends hero data (not error) to the watch
+sentMessages = [];
+fetchHeroData();
+lastXHR.status = 200;
+lastXHR.responseText = JSON.stringify({
+  name: 'HeroFromAPI',
+  level: 10,
+  klass: 'Warrior',
+  health: 90,
+  max_health: 100,
+  exp_progress: 30,
+  gold_approx: 500,
+  quest: 'Defeat the boss',
+  quest_progress: 50,
+  diary_last: 'Marching onward.',
+  godpower: 75
+});
+lastXHR.onload();
+assert.strictEqual(sentMessages.length, 1);
+assert.ok(!sentMessages[0][Keys.KEY_ERROR_MESSAGE], 'expected no error message for valid response');
+assert.strictEqual(sentMessages[0][Keys.KEY_HERO_NAME], 'HeroFromAPI');
+assert.strictEqual(sentMessages[0][Keys.KEY_HERO_LEVEL], 10);
+console.log('PASS: valid API response sends hero data to watch (no error)');
+
+// Test: valid nested { hero: {...} } response is parsed correctly
+sentMessages = [];
+fetchHeroData();
+lastXHR.status = 200;
+lastXHR.responseText = JSON.stringify({
+  hero: {
+    name: 'NestedAPIHero',
+    level: 7,
+    klass: 'Mage',
+    health: 60,
+    max_health: 80,
+    exp_progress: 55,
+    gold_approx: 300,
+    quest: 'Find the tome',
+    quest_progress: 10,
+    diary_last: 'Studying ancient texts.',
+    godpower: 40
+  }
+});
+lastXHR.onload();
+assert.strictEqual(sentMessages.length, 1);
+assert.ok(!sentMessages[0][Keys.KEY_ERROR_MESSAGE], 'expected no error message for nested response');
+assert.strictEqual(sentMessages[0][Keys.KEY_HERO_NAME], 'NestedAPIHero');
+assert.strictEqual(sentMessages[0][Keys.KEY_HERO_CLASS], 'Mage');
+console.log('PASS: valid nested API response parsed correctly');
 
 console.log('\nAll tests passed.');
