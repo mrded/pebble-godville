@@ -8,7 +8,8 @@ var assert = require('assert');
 var lastXHR = null;
 global.XMLHttpRequest = function() {
   lastXHR = this;
-  this.open = function() {};
+  this.openedUrl = null;
+  this.open = function(method, url) { this.openedUrl = url; };
   this.send = function() {};
   this.onload = null;
   this.onerror = null;
@@ -20,7 +21,8 @@ global.localStorage = (function() {
   var store = {};
   return {
     getItem: function(k) { return store[k] || null; },
-    setItem: function(k, v) { store[k] = v; }
+    setItem: function(k, v) { store[k] = v; },
+    removeItem: function(k) { delete store[k]; }
   };
 })();
 
@@ -35,6 +37,7 @@ global.Pebble = {
 var app = require('../src/src/js/pebble-js-app.js');
 var sendDataToWatch = app.sendDataToWatch;
 var fetchHeroData = app.fetchHeroData;
+var GODVILLE_REALMS = app.GODVILLE_REALMS;
 
 var Keys = {
   KEY_HERO_NAME: 0,
@@ -296,5 +299,56 @@ assert.ok(!sentMessages[0][Keys.KEY_ERROR_MESSAGE], 'expected no error message f
 assert.strictEqual(sentMessages[0][Keys.KEY_HERO_NAME], 'NestedAPIHero');
 assert.strictEqual(sentMessages[0][Keys.KEY_HERO_CLASS], 'Mage');
 console.log('PASS: valid nested API response parsed correctly');
+
+// ---- Realm tests ----
+
+// Test: GODVILLE_REALMS contains both English and Russian URLs
+assert.strictEqual(GODVILLE_REALMS['en'], 'https://godvillegame.com/gods/api/');
+assert.strictEqual(GODVILLE_REALMS['ru'], 'https://godville.net/gods/api/');
+console.log('PASS: GODVILLE_REALMS contains both en and ru endpoints');
+
+// Test: English realm uses godvillegame.com
+localStorage.setItem('godName', 'TestGod');
+localStorage.setItem('realm', 'en');
+sentMessages = [];
+fetchHeroData();
+assert.ok(lastXHR.openedUrl.indexOf(GODVILLE_REALMS['en']) === 0,
+  'English realm should use godvillegame.com, got: ' + lastXHR.openedUrl);
+console.log('PASS: English realm uses godvillegame.com');
+
+// Test: Russian realm uses godville.net
+localStorage.setItem('realm', 'ru');
+sentMessages = [];
+fetchHeroData();
+assert.ok(lastXHR.openedUrl.indexOf(GODVILLE_REALMS['ru']) === 0,
+  'Russian realm should use godville.net, got: ' + lastXHR.openedUrl);
+console.log('PASS: Russian realm uses godville.net');
+
+// Test: unknown realm falls back to English
+localStorage.setItem('realm', 'xx');
+sentMessages = [];
+fetchHeroData();
+assert.ok(lastXHR.openedUrl.indexOf(GODVILLE_REALMS['en']) === 0,
+  'Unknown realm should fall back to godvillegame.com, got: ' + lastXHR.openedUrl);
+console.log('PASS: unknown realm falls back to godvillegame.com');
+
+// Test: no realm set defaults to English
+localStorage.setItem('realm', '');
+sentMessages = [];
+fetchHeroData();
+assert.ok(lastXHR.openedUrl.indexOf(GODVILLE_REALMS['en']) === 0,
+  'No realm should default to godvillegame.com, got: ' + lastXHR.openedUrl);
+console.log('PASS: no realm set defaults to godvillegame.com (English)');
+
+// Test: realm key absent from localStorage also defaults to English
+localStorage.removeItem('realm');
+sentMessages = [];
+fetchHeroData();
+assert.ok(lastXHR.openedUrl.indexOf(GODVILLE_REALMS['en']) === 0,
+  'Absent realm key should default to godvillegame.com, got: ' + lastXHR.openedUrl);
+console.log('PASS: absent realm key defaults to godvillegame.com (English)');
+
+// Restore realm for subsequent tests
+localStorage.setItem('realm', 'en');
 
 console.log('\nAll tests passed.');

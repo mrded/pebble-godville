@@ -1,4 +1,7 @@
-var GODVILLE_API_URL = 'https://godvillegame.com/gods/api/';
+var GODVILLE_REALMS = {
+  'en': 'https://godvillegame.com/gods/api/',
+  'ru': 'https://godville.net/gods/api/'
+};
 var UPDATE_INTERVAL = 5 * 60 * 1000; // 5 minutes
 
 var Keys = {
@@ -44,7 +47,9 @@ function fetchHeroData() {
     return;
   }
 
-  var url = GODVILLE_API_URL + encodeURIComponent(godName) + '.json';
+  var realm = localStorage.getItem('realm') || 'en';
+  var apiUrl = GODVILLE_REALMS[realm] || GODVILLE_REALMS['en'];
+  var url = apiUrl + encodeURIComponent(godName) + '.json';
 
   var xhr = new XMLHttpRequest();
   xhr.open('GET', url, true);
@@ -111,13 +116,19 @@ Pebble.addEventListener('ready', function() {
 
 Pebble.addEventListener('showConfiguration', function() {
   var godName = localStorage.getItem('godName') || '';
+  var realm = localStorage.getItem('realm') || 'en';
   var configUrl = 'data:text/html,' + encodeURIComponent(
     '<html><body>' +
     '<h3>Godville</h3>' +
     '<label>God name: <input id="name" value="' + godName + '"></label><br><br>' +
+    '<label>Realm: <select id="realm">' +
+      '<option value="en"' + (realm === 'en' ? ' selected' : '') + '>English (godvillegame.com)</option>' +
+      '<option value="ru"' + (realm === 'ru' ? ' selected' : '') + '>Russian (godville.net)</option>' +
+    '</select></label><br><br>' +
     '<button onclick="' +
       'var n=document.getElementById(\'name\').value;' +
-      'location.href=\'pebblejs://close#\'+encodeURIComponent(JSON.stringify({godName:n}));' +
+      'var r=document.getElementById(\'realm\').value;' +
+      'location.href=\'pebblejs://close#\'+encodeURIComponent(JSON.stringify({godName:n,realm:r}));' +
     '">Save</button>' +
     '</body></html>'
   );
@@ -128,9 +139,18 @@ Pebble.addEventListener('webviewclosed', function(e) {
   if (e.response) {
     try {
       var config = JSON.parse(decodeURIComponent(e.response));
+      var changed = false;
       if (config.godName) {
         localStorage.setItem('godName', config.godName);
         console.log('God name saved: ' + config.godName);
+        changed = true;
+      }
+      if (config.realm && GODVILLE_REALMS[config.realm]) {
+        localStorage.setItem('realm', config.realm);
+        console.log('Realm saved: ' + config.realm);
+        changed = true;
+      }
+      if (changed) {
         fetchHeroData();
       }
     } catch (err) {
@@ -140,5 +160,5 @@ Pebble.addEventListener('webviewclosed', function(e) {
 });
 
 if (typeof module !== 'undefined') {
-  module.exports = { fetchHeroData: fetchHeroData, sendDataToWatch: sendDataToWatch };
+  module.exports = { fetchHeroData: fetchHeroData, sendDataToWatch: sendDataToWatch, GODVILLE_REALMS: GODVILLE_REALMS };
 }
