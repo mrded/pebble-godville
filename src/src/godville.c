@@ -178,11 +178,17 @@ static void main_window_load(Window *window) {
   // Stage background — must be added first so text layers render on top
   rendering_init(window);
 
+  // Helper macro: transparent background + white text for all overlay layers
+  #define SETUP_TEXT_LAYER(layer) \
+    text_layer_set_background_color((layer), GColorClear); \
+    text_layer_set_text_color((layer), GColorWhite)
+
   // Time — centred, prominent
   s_time_layer = text_layer_create(GRect(0, y, bounds.size.w, 32));
   text_layer_set_font(s_time_layer, fonts_get_system_font(FONT_KEY_GOTHIC_28_BOLD));
   text_layer_set_text_alignment(s_time_layer, GTextAlignmentCenter);
   text_layer_set_text(s_time_layer, "00:00");
+  SETUP_TEXT_LAYER(s_time_layer);
   layer_add_child(window_layer, text_layer_get_layer(s_time_layer));
   y += 32;
 
@@ -190,24 +196,28 @@ static void main_window_load(Window *window) {
   s_name_layer = text_layer_create(GRect(2, y, width, 20));
   text_layer_set_font(s_name_layer, fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD));
   text_layer_set_text(s_name_layer, "Loading...");
+  SETUP_TEXT_LAYER(s_name_layer);
   layer_add_child(window_layer, text_layer_get_layer(s_name_layer));
   y += 20;
 
   // Level + class
   s_level_class_layer = text_layer_create(GRect(2, y, width, 16));
   text_layer_set_font(s_level_class_layer, fonts_get_system_font(FONT_KEY_GOTHIC_14));
+  SETUP_TEXT_LAYER(s_level_class_layer);
   layer_add_child(window_layer, text_layer_get_layer(s_level_class_layer));
   y += 16;
 
   // HP + EXP
   s_stats_layer = text_layer_create(GRect(2, y, width, 16));
   text_layer_set_font(s_stats_layer, fonts_get_system_font(FONT_KEY_GOTHIC_14));
+  SETUP_TEXT_LAYER(s_stats_layer);
   layer_add_child(window_layer, text_layer_get_layer(s_stats_layer));
   y += 16;
 
   // Gold + GP
   s_resources_layer = text_layer_create(GRect(2, y, width, 16));
   text_layer_set_font(s_resources_layer, fonts_get_system_font(FONT_KEY_GOTHIC_14));
+  SETUP_TEXT_LAYER(s_resources_layer);
   layer_add_child(window_layer, text_layer_get_layer(s_resources_layer));
   y += 16;
 
@@ -215,6 +225,7 @@ static void main_window_load(Window *window) {
   s_quest_layer = text_layer_create(GRect(2, y, width, 32));
   text_layer_set_font(s_quest_layer, fonts_get_system_font(FONT_KEY_GOTHIC_14));
   text_layer_set_overflow_mode(s_quest_layer, GTextOverflowModeWordWrap);
+  SETUP_TEXT_LAYER(s_quest_layer);
   layer_add_child(window_layer, text_layer_get_layer(s_quest_layer));
   y += 32;
 
@@ -222,6 +233,7 @@ static void main_window_load(Window *window) {
   s_activity_layer = text_layer_create(GRect(2, y, width, bounds.size.h - y - 2));
   text_layer_set_font(s_activity_layer, fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD));
   text_layer_set_overflow_mode(s_activity_layer, GTextOverflowModeWordWrap);
+  SETUP_TEXT_LAYER(s_activity_layer);
   layer_add_child(window_layer, text_layer_get_layer(s_activity_layer));
 
   // Show the correct time right away (don't wait for first tick)
