@@ -13,7 +13,16 @@ var Keys = {
   KEY_HERO_QUEST_PROGRESS: 8,
   KEY_HERO_ACTIVITY: 9,
   KEY_HERO_GODPOWER: 10,
-  KEY_ERROR_MESSAGE: 11
+  KEY_ERROR_MESSAGE: 11,
+  KEY_HERO_HAS_PET: 12,
+  KEY_HERO_HAS_BRICKS: 13,
+  KEY_HERO_HAS_TEMPLE_COMPLETED: 14,
+  KEY_HERO_HAS_WOOD: 15,
+  KEY_HERO_HAS_ARK_COMPLETED: 16,
+  KEY_HERO_HAS_SAVINGS: 17,
+  KEY_HERO_TOWN_NAME: 18,
+  KEY_HERO_DISTANCE: 19,
+  KEY_HERO_ARENA_FIGHT: 20
 };
 
 function fetchHeroData() {
@@ -57,17 +66,28 @@ function sendDataToWatch(data) {
   var hero = data.hero || data;
 
   var dict = {};
-  dict[Keys.KEY_HERO_NAME] = (hero.name || 'Unknown').substring(0, 63);
-  dict[Keys.KEY_HERO_LEVEL] = hero.level || 0;
-  dict[Keys.KEY_HERO_CLASS] = (hero.klass || hero['class'] || '').substring(0, 63);
-  dict[Keys.KEY_HERO_HEALTH] = hero.health || 0;
-  dict[Keys.KEY_HERO_MAX_HEALTH] = hero.max_health || 0;
-  dict[Keys.KEY_HERO_EXP] = hero.exp_progress || 0;
-  dict[Keys.KEY_HERO_GOLD] = hero.gold_approx || 0;
-  dict[Keys.KEY_HERO_QUEST] = (hero.quest || 'No quest').substring(0, 63);
+  dict[Keys.KEY_HERO_NAME]           = (hero.name || 'Unknown').substring(0, 63);
+  dict[Keys.KEY_HERO_LEVEL]          = hero.level || 0;
+  dict[Keys.KEY_HERO_CLASS]          = (hero.klass || hero['class'] || '').substring(0, 63);
+  dict[Keys.KEY_HERO_HEALTH]         = hero.health || 0;
+  dict[Keys.KEY_HERO_MAX_HEALTH]     = hero.max_health || 0;
+  dict[Keys.KEY_HERO_EXP]            = hero.exp_progress || 0;
+  dict[Keys.KEY_HERO_GOLD]           = hero.gold_approx || 0;
+  dict[Keys.KEY_HERO_QUEST]          = (hero.quest || 'No quest').substring(0, 63);
   dict[Keys.KEY_HERO_QUEST_PROGRESS] = hero.quest_progress || 0;
-  dict[Keys.KEY_HERO_ACTIVITY] = (hero.diary_last || '').substring(0, 127);
-  dict[Keys.KEY_HERO_GODPOWER] = hero.godpower || 0;
+  dict[Keys.KEY_HERO_ACTIVITY]       = (hero.diary_last || '').substring(0, 127);
+  dict[Keys.KEY_HERO_GODPOWER]       = hero.godpower || 0;
+
+  // Stage inference fields
+  dict[Keys.KEY_HERO_HAS_PET]              = hero.pet ? 1 : 0;
+  dict[Keys.KEY_HERO_HAS_BRICKS]           = (hero.bricks_cnt > 0) ? 1 : 0;
+  dict[Keys.KEY_HERO_HAS_TEMPLE_COMPLETED] = hero.temple_completed_at ? 1 : 0;
+  dict[Keys.KEY_HERO_HAS_WOOD]             = (hero.wood_cnt > 0) ? 1 : 0;
+  dict[Keys.KEY_HERO_HAS_ARK_COMPLETED]    = hero.ark_completed_at ? 1 : 0;
+  dict[Keys.KEY_HERO_HAS_SAVINGS]          = (hero.savings > 0) ? 1 : 0;
+  dict[Keys.KEY_HERO_TOWN_NAME]            = (hero.town_name || '').substring(0, 63);
+  dict[Keys.KEY_HERO_DISTANCE]             = hero.distance || 0;
+  dict[Keys.KEY_HERO_ARENA_FIGHT]          = hero.arena_fight ? 1 : 0;
 
   Pebble.sendAppMessage(dict, function() {
     console.log('Data sent to Pebble successfully');

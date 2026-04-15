@@ -19,10 +19,28 @@
     "KEY_HERO_QUEST": 7,
     "KEY_HERO_QUEST_PROGRESS": 8,
     "KEY_HERO_ACTIVITY": 9,
-    "KEY_HERO_GODPOWER": 10
+    "KEY_HERO_GODPOWER": 10,
+    "KEY_ERROR_MESSAGE": 11,
+    "KEY_HERO_HAS_PET": 12,
+    "KEY_HERO_HAS_BRICKS": 13,
+    "KEY_HERO_HAS_TEMPLE_COMPLETED": 14,
+    "KEY_HERO_HAS_WOOD": 15,
+    "KEY_HERO_HAS_ARK_COMPLETED": 16,
+    "KEY_HERO_HAS_SAVINGS": 17,
+    "KEY_HERO_TOWN_NAME": 18,
+    "KEY_HERO_DISTANCE": 19,
+    "KEY_HERO_ARENA_FIGHT": 20
   },
   "resources": {
-    "media": []
+    "media": [
+      {"type": "bitmap", "name": "STAGE_EARLY_HERO",       "file": "stage_early_hero.png"},
+      {"type": "bitmap", "name": "STAGE_WITH_PET",         "file": "stage_with_pet.png"},
+      {"type": "bitmap", "name": "STAGE_BUILDING_TEMPLE",  "file": "stage_building_temple.png"},
+      {"type": "bitmap", "name": "STAGE_TEMPLE_COMPLETE",  "file": "stage_temple_complete.png"},
+      {"type": "bitmap", "name": "STAGE_ARK_BUILDING",     "file": "stage_ark_building.png"},
+      {"type": "bitmap", "name": "STAGE_ARK_COMPLETE",     "file": "stage_ark_complete.png"},
+      {"type": "bitmap", "name": "STAGE_ENDGAME",          "file": "stage_endgame.png"}
+    ]
   },
   "targetPlatforms": [
     "aplite",

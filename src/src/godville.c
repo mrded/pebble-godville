@@ -1,19 +1,34 @@
 #include <pebble.h>
+#include "hero_state.h"
+#include "stage_assets.h"
+#include "rendering.h"
 
-#define KEY_HERO_NAME           0
-#define KEY_HERO_LEVEL          1
-#define KEY_HERO_CLASS          2
-#define KEY_HERO_HEALTH         3
-#define KEY_HERO_MAX_HEALTH     4
-#define KEY_HERO_EXP            5
-#define KEY_HERO_GOLD           6
-#define KEY_HERO_QUEST          7
-#define KEY_HERO_QUEST_PROGRESS 8
-#define KEY_HERO_ACTIVITY       9
-#define KEY_HERO_GODPOWER       10
-#define KEY_ERROR_MESSAGE       11
+#define KEY_HERO_NAME                0
+#define KEY_HERO_LEVEL               1
+#define KEY_HERO_CLASS               2
+#define KEY_HERO_HEALTH              3
+#define KEY_HERO_MAX_HEALTH          4
+#define KEY_HERO_EXP                 5
+#define KEY_HERO_GOLD                6
+#define KEY_HERO_QUEST               7
+#define KEY_HERO_QUEST_PROGRESS      8
+#define KEY_HERO_ACTIVITY            9
+#define KEY_HERO_GODPOWER            10
+#define KEY_ERROR_MESSAGE            11
+#define KEY_HERO_HAS_PET             12
+#define KEY_HERO_HAS_BRICKS          13
+#define KEY_HERO_HAS_TEMPLE_COMPLETED 14
+#define KEY_HERO_HAS_WOOD            15
+#define KEY_HERO_HAS_ARK_COMPLETED   16
+#define KEY_HERO_HAS_SAVINGS         17
+#define KEY_HERO_TOWN_NAME           18
+#define KEY_HERO_DISTANCE            19
+#define KEY_HERO_ARENA_FIGHT         20
 
 static Window *s_main_window;
+
+// Hero state shared with the rendering module
+static GodvilleHero s_hero;
 
 static TextLayer *s_time_layer;
 static TextLayer *s_name_layer;
@@ -108,6 +123,46 @@ static void inbox_received_handler(DictionaryIterator *iter, void *context) {
     snprintf(s_activity_buf, sizeof(s_activity_buf), "%s", activity_t->value->cstring);
     text_layer_set_text(s_activity_layer, s_activity_buf);
   }
+
+  // Update hero state fields used for stage/activity inference
+  Tuple *has_pet_t      = dict_find(iter, KEY_HERO_HAS_PET);
+  Tuple *has_bricks_t   = dict_find(iter, KEY_HERO_HAS_BRICKS);
+  Tuple *has_temple_t   = dict_find(iter, KEY_HERO_HAS_TEMPLE_COMPLETED);
+  Tuple *has_wood_t     = dict_find(iter, KEY_HERO_HAS_WOOD);
+  Tuple *has_ark_t      = dict_find(iter, KEY_HERO_HAS_ARK_COMPLETED);
+  Tuple *has_savings_t  = dict_find(iter, KEY_HERO_HAS_SAVINGS);
+  Tuple *town_name_t    = dict_find(iter, KEY_HERO_TOWN_NAME);
+  Tuple *distance_t     = dict_find(iter, KEY_HERO_DISTANCE);
+  Tuple *arena_fight_t  = dict_find(iter, KEY_HERO_ARENA_FIGHT);
+
+  bool hero_dirty = false;
+
+  if (health_t)     { s_hero.hp     = (int)health_t->value->int32;     hero_dirty = true; }
+  if (max_health_t) { s_hero.max_hp = (int)max_health_t->value->int32; hero_dirty = true; }
+  if (level_t)      { s_hero.level  = (int)level_t->value->int32;      hero_dirty = true; }
+
+  if (has_pet_t)     { s_hero.has_pet                 = (bool)has_pet_t->value->int32;     hero_dirty = true; }
+  if (has_bricks_t)  { s_hero.has_bricks              = (bool)has_bricks_t->value->int32;  hero_dirty = true; }
+  if (has_temple_t)  { s_hero.has_temple_completed_at = (bool)has_temple_t->value->int32;  hero_dirty = true; }
+  if (has_wood_t)    { s_hero.has_wood                = (bool)has_wood_t->value->int32;    hero_dirty = true; }
+  if (has_ark_t)     { s_hero.has_ark_completed_at    = (bool)has_ark_t->value->int32;     hero_dirty = true; }
+  if (has_savings_t) { s_hero.has_savings             = (bool)has_savings_t->value->int32; hero_dirty = true; }
+  if (arena_fight_t) { s_hero.arena_fight             = (bool)arena_fight_t->value->int32; hero_dirty = true; }
+  if (distance_t)    { s_hero.distance                = (int)distance_t->value->int32;     hero_dirty = true; }
+
+  if (town_name_t) {
+    snprintf(s_hero.town_name, sizeof(s_hero.town_name), "%s", town_name_t->value->cstring);
+    hero_dirty = true;
+  }
+
+  if (activity_t) {
+    snprintf(s_hero.diary_last, sizeof(s_hero.diary_last), "%s", activity_t->value->cstring);
+    hero_dirty = true;
+  }
+
+  if (hero_dirty) {
+    rendering_update_hero(&s_hero);
+  }
 }
 
 static void inbox_dropped_handler(AppMessageResult reason, void *context) {
@@ -119,6 +174,9 @@ static void main_window_load(Window *window) {
   GRect bounds = layer_get_bounds(window_layer);
   int width = bounds.size.w - 4;
   int y = 0;
+
+  // Stage background — must be added first so text layers render on top
+  rendering_init(window);
 
   // Time — centred, prominent
   s_time_layer = text_layer_create(GRect(0, y, bounds.size.w, 32));
@@ -176,6 +234,7 @@ static void main_window_load(Window *window) {
 }
 
 static void main_window_unload(Window *window) {
+  rendering_deinit();
   text_layer_destroy(s_time_layer);
   text_layer_destroy(s_name_layer);
   text_layer_destroy(s_level_class_layer);
@@ -186,6 +245,8 @@ static void main_window_unload(Window *window) {
 }
 
 static void init(void) {
+  load_stage_assets();
+
   s_main_window = window_create();
   window_set_window_handlers(s_main_window, (WindowHandlers) {
     .load = main_window_load,
@@ -203,6 +264,7 @@ static void init(void) {
 static void deinit(void) {
   tick_timer_service_unsubscribe();
   window_destroy(s_main_window);
+  unload_stage_assets();
 }
 
 int main(void) {
