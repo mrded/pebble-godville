@@ -30,7 +30,7 @@ void unload_stage_assets(void) {
 GBitmap *get_stage_bitmap(HeroStage stage) {
   // Out-of-range stages fall back to EARLY; either may still be NULL if
   // load_stage_assets() has not been called or the resource failed to load.
-  if (stage >= 0 && stage < HERO_STAGE_COUNT) {
+  if (stage < HERO_STAGE_COUNT) {
     return s_stage_bitmaps[stage];
   }
   return s_stage_bitmaps[HERO_STAGE_EARLY];
