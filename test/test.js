@@ -20,7 +20,9 @@ global.XMLHttpRequest = function() {
 global.localStorage = (function() {
   var store = {};
   return {
-    getItem: function(k) { return store[k] || null; },
+    getItem: function(k) {
+      return Object.prototype.hasOwnProperty.call(store, k) ? store[k] : null;
+    },
     setItem: function(k, v) { store[k] = v; },
     removeItem: function(k) { delete store[k]; }
   };
