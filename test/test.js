@@ -45,7 +45,16 @@ var Keys = {
   KEY_HERO_QUEST_PROGRESS: 8,
   KEY_HERO_ACTIVITY: 9,
   KEY_HERO_GODPOWER: 10,
-  KEY_ERROR_MESSAGE: 11
+  KEY_ERROR_MESSAGE: 11,
+  KEY_HERO_HAS_PET: 12,
+  KEY_HERO_HAS_BRICKS: 13,
+  KEY_HERO_HAS_TEMPLE_COMPLETED: 14,
+  KEY_HERO_HAS_WOOD: 15,
+  KEY_HERO_HAS_ARK_COMPLETED: 16,
+  KEY_HERO_HAS_SAVINGS: 17,
+  KEY_HERO_TOWN_NAME: 18,
+  KEY_HERO_DISTANCE: 19,
+  KEY_HERO_ARENA_FIGHT: 20
 };
 
 // We replicate sendDataToWatch here to test the data-mapping logic
@@ -53,17 +62,28 @@ function sendDataToWatch(data) {
   var hero = data.hero || data;
 
   var dict = {};
-  dict[Keys.KEY_HERO_NAME] = (hero.name || 'Unknown').substring(0, 63);
-  dict[Keys.KEY_HERO_LEVEL] = hero.level || 0;
-  dict[Keys.KEY_HERO_CLASS] = (hero.klass || hero['class'] || '').substring(0, 63);
-  dict[Keys.KEY_HERO_HEALTH] = hero.health || 0;
-  dict[Keys.KEY_HERO_MAX_HEALTH] = hero.max_health || 0;
-  dict[Keys.KEY_HERO_EXP] = hero.exp_progress || 0;
-  dict[Keys.KEY_HERO_GOLD] = hero.gold_approx || 0;
-  dict[Keys.KEY_HERO_QUEST] = (hero.quest || 'No quest').substring(0, 63);
+  dict[Keys.KEY_HERO_NAME]           = (hero.name || 'Unknown').substring(0, 63);
+  dict[Keys.KEY_HERO_LEVEL]          = hero.level || 0;
+  dict[Keys.KEY_HERO_CLASS]          = (hero.klass || hero['class'] || '').substring(0, 63);
+  dict[Keys.KEY_HERO_HEALTH]         = hero.health || 0;
+  dict[Keys.KEY_HERO_MAX_HEALTH]     = hero.max_health || 0;
+  dict[Keys.KEY_HERO_EXP]            = hero.exp_progress || 0;
+  dict[Keys.KEY_HERO_GOLD]           = hero.gold_approx || 0;
+  dict[Keys.KEY_HERO_QUEST]          = (hero.quest || 'No quest').substring(0, 63);
   dict[Keys.KEY_HERO_QUEST_PROGRESS] = hero.quest_progress || 0;
-  dict[Keys.KEY_HERO_ACTIVITY] = (hero.diary_last || '').substring(0, 127);
-  dict[Keys.KEY_HERO_GODPOWER] = hero.godpower || 0;
+  dict[Keys.KEY_HERO_ACTIVITY]       = (hero.diary_last || '').substring(0, 127);
+  dict[Keys.KEY_HERO_GODPOWER]       = hero.godpower || 0;
+
+  // Stage inference fields
+  dict[Keys.KEY_HERO_HAS_PET]              = hero.pet ? 1 : 0;
+  dict[Keys.KEY_HERO_HAS_BRICKS]           = (hero.bricks_cnt > 0) ? 1 : 0;
+  dict[Keys.KEY_HERO_HAS_TEMPLE_COMPLETED] = hero.temple_completed_at ? 1 : 0;
+  dict[Keys.KEY_HERO_HAS_WOOD]             = (hero.wood_cnt > 0) ? 1 : 0;
+  dict[Keys.KEY_HERO_HAS_ARK_COMPLETED]    = hero.ark_completed_at ? 1 : 0;
+  dict[Keys.KEY_HERO_HAS_SAVINGS]          = (hero.savings > 0) ? 1 : 0;
+  dict[Keys.KEY_HERO_TOWN_NAME]            = (hero.town_name || '').substring(0, 63);
+  dict[Keys.KEY_HERO_DISTANCE]             = hero.distance || 0;
+  dict[Keys.KEY_HERO_ARENA_FIGHT]          = hero.arena_fight ? 1 : 0;
 
   Pebble.sendAppMessage(dict, function() {}, function() {});
 }
@@ -165,5 +185,61 @@ assert.strictEqual(sentMessages[0][Keys.KEY_HERO_NAME].length, 63);
 assert.strictEqual(sentMessages[0][Keys.KEY_HERO_QUEST].length, 63);
 assert.strictEqual(sentMessages[0][Keys.KEY_HERO_ACTIVITY].length, 127);
 console.log('PASS: long strings are truncated to field limits');
+
+// Test: stage inference fields — hero with a pet
+sentMessages = [];
+sendDataToWatch({ pet: { name: 'Doggy' }, bricks_cnt: 0 });
+assert.strictEqual(sentMessages[0][Keys.KEY_HERO_HAS_PET], 1);
+assert.strictEqual(sentMessages[0][Keys.KEY_HERO_HAS_BRICKS], 0);
+console.log('PASS: pet flag set when hero has a pet');
+
+// Test: stage inference fields — hero building the temple
+sentMessages = [];
+sendDataToWatch({ bricks_cnt: 42 });
+assert.strictEqual(sentMessages[0][Keys.KEY_HERO_HAS_BRICKS], 1);
+assert.strictEqual(sentMessages[0][Keys.KEY_HERO_HAS_PET], 0);
+console.log('PASS: bricks flag set when bricks_cnt > 0');
+
+// Test: stage inference fields — temple done, building ark
+sentMessages = [];
+sendDataToWatch({ temple_completed_at: '2024-01-01', wood_cnt: 7 });
+assert.strictEqual(sentMessages[0][Keys.KEY_HERO_HAS_TEMPLE_COMPLETED], 1);
+assert.strictEqual(sentMessages[0][Keys.KEY_HERO_HAS_WOOD], 1);
+console.log('PASS: temple_completed and wood flags set correctly');
+
+// Test: stage inference fields — ark done, has savings (endgame)
+sentMessages = [];
+sendDataToWatch({ ark_completed_at: '2025-06-01', savings: 10000 });
+assert.strictEqual(sentMessages[0][Keys.KEY_HERO_HAS_ARK_COMPLETED], 1);
+assert.strictEqual(sentMessages[0][Keys.KEY_HERO_HAS_SAVINGS], 1);
+console.log('PASS: ark_completed and savings flags set correctly');
+
+// Test: activity inference fields — in town
+sentMessages = [];
+sendDataToWatch({ town_name: 'Beerburg', distance: 0 });
+assert.strictEqual(sentMessages[0][Keys.KEY_HERO_TOWN_NAME], 'Beerburg');
+assert.strictEqual(sentMessages[0][Keys.KEY_HERO_DISTANCE], 0);
+console.log('PASS: town_name and distance sent correctly');
+
+// Test: activity inference fields — travelling, arena fight
+sentMessages = [];
+sendDataToWatch({ distance: 15, arena_fight: true });
+assert.strictEqual(sentMessages[0][Keys.KEY_HERO_DISTANCE], 15);
+assert.strictEqual(sentMessages[0][Keys.KEY_HERO_ARENA_FIGHT], 1);
+console.log('PASS: distance and arena_fight sent correctly');
+
+// Test: stage inference defaults when all optional fields absent
+sentMessages = [];
+sendDataToWatch({});
+assert.strictEqual(sentMessages[0][Keys.KEY_HERO_HAS_PET], 0);
+assert.strictEqual(sentMessages[0][Keys.KEY_HERO_HAS_BRICKS], 0);
+assert.strictEqual(sentMessages[0][Keys.KEY_HERO_HAS_TEMPLE_COMPLETED], 0);
+assert.strictEqual(sentMessages[0][Keys.KEY_HERO_HAS_WOOD], 0);
+assert.strictEqual(sentMessages[0][Keys.KEY_HERO_HAS_ARK_COMPLETED], 0);
+assert.strictEqual(sentMessages[0][Keys.KEY_HERO_HAS_SAVINGS], 0);
+assert.strictEqual(sentMessages[0][Keys.KEY_HERO_TOWN_NAME], '');
+assert.strictEqual(sentMessages[0][Keys.KEY_HERO_DISTANCE], 0);
+assert.strictEqual(sentMessages[0][Keys.KEY_HERO_ARENA_FIGHT], 0);
+console.log('PASS: all stage/activity fields default to falsy when absent');
 
 console.log('\nAll tests passed.');
