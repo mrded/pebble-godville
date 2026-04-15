@@ -3,8 +3,13 @@
 var assert = require('assert');
 
 // Minimal stubs for Pebble JS environment
+
+// XHR mock that captures the last instance so tests can trigger callbacks
+var lastXHR = null;
 global.XMLHttpRequest = function() {
-  this.open = function() {};
+  lastXHR = this;
+  this.openedUrl = null;
+  this.open = function(method, url) { this.openedUrl = url; };
   this.send = function() {};
   this.onload = null;
   this.onerror = null;
@@ -15,8 +20,11 @@ global.XMLHttpRequest = function() {
 global.localStorage = (function() {
   var store = {};
   return {
-    getItem: function(k) { return store[k] || null; },
-    setItem: function(k, v) { store[k] = v; }
+    getItem: function(k) {
+      return Object.prototype.hasOwnProperty.call(store, k) ? store[k] : null;
+    },
+    setItem: function(k, v) { store[k] = v; },
+    removeItem: function(k) { delete store[k]; }
   };
 })();
 
@@ -27,11 +35,12 @@ global.Pebble = {
   openURL: function() {}
 };
 
-// Load the companion app
-require('../src/src/js/pebble-js-app.js');
-
-// Re-expose the module's sendDataToWatch via a direct call so we can test it.
-// We test it by inspecting what gets sent to Pebble.sendAppMessage.
+// Load the companion app and get the exports
+var app = require('../src/src/js/pebble-js-app.js');
+var sendDataToWatch = app.sendDataToWatch;
+var fetchHeroData = app.fetchHeroData;
+var GODVILLE_REALMS = app.GODVILLE_REALMS;
+var htmlEscape = app.htmlEscape;
 
 var Keys = {
   KEY_HERO_NAME: 0,
@@ -56,37 +65,6 @@ var Keys = {
   KEY_HERO_DISTANCE: 19,
   KEY_HERO_ARENA_FIGHT: 20
 };
-
-// We replicate sendDataToWatch here to test the data-mapping logic
-function sendDataToWatch(data) {
-  var hero = data.hero || data;
-
-  var dict = {};
-  dict[Keys.KEY_HERO_NAME]           = (hero.name || 'Unknown').substring(0, 63);
-  dict[Keys.KEY_HERO_LEVEL]          = hero.level || 0;
-  dict[Keys.KEY_HERO_CLASS]          = (hero.klass || hero['class'] || '').substring(0, 63);
-  dict[Keys.KEY_HERO_HEALTH]         = hero.health || 0;
-  dict[Keys.KEY_HERO_MAX_HEALTH]     = hero.max_health || 0;
-  dict[Keys.KEY_HERO_EXP]            = hero.exp_progress || 0;
-  dict[Keys.KEY_HERO_GOLD]           = hero.gold_approx || 0;
-  dict[Keys.KEY_HERO_QUEST]          = (hero.quest || 'No quest').substring(0, 63);
-  dict[Keys.KEY_HERO_QUEST_PROGRESS] = hero.quest_progress || 0;
-  dict[Keys.KEY_HERO_ACTIVITY]       = (hero.diary_last || '').substring(0, 127);
-  dict[Keys.KEY_HERO_GODPOWER]       = hero.godpower || 0;
-
-  // Stage inference fields
-  dict[Keys.KEY_HERO_HAS_PET]              = hero.pet ? 1 : 0;
-  dict[Keys.KEY_HERO_HAS_BRICKS]           = (hero.bricks_cnt > 0) ? 1 : 0;
-  dict[Keys.KEY_HERO_HAS_TEMPLE_COMPLETED] = hero.temple_completed_at ? 1 : 0;
-  dict[Keys.KEY_HERO_HAS_WOOD]             = (hero.wood_cnt > 0) ? 1 : 0;
-  dict[Keys.KEY_HERO_HAS_ARK_COMPLETED]    = hero.ark_completed_at ? 1 : 0;
-  dict[Keys.KEY_HERO_HAS_SAVINGS]          = (hero.savings > 0) ? 1 : 0;
-  dict[Keys.KEY_HERO_TOWN_NAME]            = (hero.town_name || '').substring(0, 63);
-  dict[Keys.KEY_HERO_DISTANCE]             = hero.distance || 0;
-  dict[Keys.KEY_HERO_ARENA_FIGHT]          = hero.arena_fight ? 1 : 0;
-
-  Pebble.sendAppMessage(dict, function() {}, function() {});
-}
 
 // ---- Tests ----
 
@@ -167,8 +145,7 @@ console.log('PASS: config uses godName key for API lookup');
   };
   sentMessages = [];
   try {
-    var app = require('../src/src/js/pebble-js-app.js');
-    app.fetchHeroData();
+    fetchHeroData();
     // Default 'mrded' is used — XHR is attempted, no error message is sent
     assert.strictEqual(sentMessages.length, 0);
   } finally {
@@ -241,5 +218,165 @@ assert.strictEqual(sentMessages[0][Keys.KEY_HERO_TOWN_NAME], '');
 assert.strictEqual(sentMessages[0][Keys.KEY_HERO_DISTANCE], 0);
 assert.strictEqual(sentMessages[0][Keys.KEY_HERO_ARENA_FIGHT], 0);
 console.log('PASS: all stage/activity fields default to falsy when absent');
+
+// ---- fetchHeroData error-handling tests ----
+// These verify the watch is never left stuck on "Loading..." when the API fails.
+
+localStorage.setItem('godName', 'TestGod');
+
+// Test: non-200 HTTP status sends an error message to the watch
+sentMessages = [];
+fetchHeroData();
+lastXHR.status = 404;
+lastXHR.onload();
+assert.strictEqual(sentMessages.length, 1);
+assert.ok(sentMessages[0][Keys.KEY_ERROR_MESSAGE], 'expected error message for 404');
+assert.ok(sentMessages[0][Keys.KEY_ERROR_MESSAGE].indexOf('404') !== -1,
+  'error message should include status code');
+console.log('PASS: HTTP 404 response sends error message to watch');
+
+// Test: network error sends an error message to the watch
+sentMessages = [];
+fetchHeroData();
+lastXHR.onerror();
+assert.strictEqual(sentMessages.length, 1);
+assert.ok(sentMessages[0][Keys.KEY_ERROR_MESSAGE], 'expected error message for network error');
+console.log('PASS: network error sends error message to watch');
+
+// Test: invalid JSON response sends an error message to the watch
+sentMessages = [];
+fetchHeroData();
+lastXHR.status = 200;
+lastXHR.responseText = 'not valid json {{{';
+lastXHR.onload();
+assert.strictEqual(sentMessages.length, 1);
+assert.ok(sentMessages[0][Keys.KEY_ERROR_MESSAGE], 'expected error message for invalid JSON');
+console.log('PASS: invalid JSON response sends error message to watch');
+
+// Test: valid 200 response with hero data sends hero data (not error) to the watch
+sentMessages = [];
+fetchHeroData();
+lastXHR.status = 200;
+lastXHR.responseText = JSON.stringify({
+  name: 'HeroFromAPI',
+  level: 10,
+  klass: 'Warrior',
+  health: 90,
+  max_health: 100,
+  exp_progress: 30,
+  gold_approx: 500,
+  quest: 'Defeat the boss',
+  quest_progress: 50,
+  diary_last: 'Marching onward.',
+  godpower: 75
+});
+lastXHR.onload();
+assert.strictEqual(sentMessages.length, 1);
+assert.ok(!sentMessages[0][Keys.KEY_ERROR_MESSAGE], 'expected no error message for valid response');
+assert.strictEqual(sentMessages[0][Keys.KEY_HERO_NAME], 'HeroFromAPI');
+assert.strictEqual(sentMessages[0][Keys.KEY_HERO_LEVEL], 10);
+console.log('PASS: valid API response sends hero data to watch (no error)');
+
+// Test: valid nested { hero: {...} } response is parsed correctly
+sentMessages = [];
+fetchHeroData();
+lastXHR.status = 200;
+lastXHR.responseText = JSON.stringify({
+  hero: {
+    name: 'NestedAPIHero',
+    level: 7,
+    klass: 'Mage',
+    health: 60,
+    max_health: 80,
+    exp_progress: 55,
+    gold_approx: 300,
+    quest: 'Find the tome',
+    quest_progress: 10,
+    diary_last: 'Studying ancient texts.',
+    godpower: 40
+  }
+});
+lastXHR.onload();
+assert.strictEqual(sentMessages.length, 1);
+assert.ok(!sentMessages[0][Keys.KEY_ERROR_MESSAGE], 'expected no error message for nested response');
+assert.strictEqual(sentMessages[0][Keys.KEY_HERO_NAME], 'NestedAPIHero');
+assert.strictEqual(sentMessages[0][Keys.KEY_HERO_CLASS], 'Mage');
+console.log('PASS: valid nested API response parsed correctly');
+
+// ---- Realm tests ----
+
+// Test: GODVILLE_REALMS contains both English and Russian URLs
+assert.strictEqual(GODVILLE_REALMS['en'], 'https://godvillegame.com/gods/api/');
+assert.strictEqual(GODVILLE_REALMS['ru'], 'https://godville.net/gods/api/');
+console.log('PASS: GODVILLE_REALMS contains both en and ru endpoints');
+
+// Test: English realm uses godvillegame.com
+localStorage.setItem('godName', 'TestGod');
+localStorage.setItem('realm', 'en');
+sentMessages = [];
+fetchHeroData();
+assert.ok(lastXHR.openedUrl.indexOf(GODVILLE_REALMS['en']) === 0,
+  'English realm should use godvillegame.com, got: ' + lastXHR.openedUrl);
+console.log('PASS: English realm uses godvillegame.com');
+
+// Test: Russian realm uses godville.net
+localStorage.setItem('realm', 'ru');
+sentMessages = [];
+fetchHeroData();
+assert.ok(lastXHR.openedUrl.indexOf(GODVILLE_REALMS['ru']) === 0,
+  'Russian realm should use godville.net, got: ' + lastXHR.openedUrl);
+console.log('PASS: Russian realm uses godville.net');
+
+// Test: unknown realm falls back to English
+localStorage.setItem('realm', 'xx');
+sentMessages = [];
+fetchHeroData();
+assert.ok(lastXHR.openedUrl.indexOf(GODVILLE_REALMS['en']) === 0,
+  'Unknown realm should fall back to godvillegame.com, got: ' + lastXHR.openedUrl);
+console.log('PASS: unknown realm falls back to godvillegame.com');
+
+// Test: no realm set defaults to English
+localStorage.setItem('realm', '');
+sentMessages = [];
+fetchHeroData();
+assert.ok(lastXHR.openedUrl.indexOf(GODVILLE_REALMS['en']) === 0,
+  'No realm should default to godvillegame.com, got: ' + lastXHR.openedUrl);
+console.log('PASS: no realm set defaults to godvillegame.com (English)');
+
+// Test: realm key absent from localStorage also defaults to English
+localStorage.removeItem('realm');
+sentMessages = [];
+fetchHeroData();
+assert.ok(lastXHR.openedUrl.indexOf(GODVILLE_REALMS['en']) === 0,
+  'Absent realm key should default to godvillegame.com, got: ' + lastXHR.openedUrl);
+console.log('PASS: absent realm key defaults to godvillegame.com (English)');
+
+// Restore realm for subsequent tests
+localStorage.setItem('realm', 'en');
+
+// ---- htmlEscape tests ----
+
+// Test: special HTML characters are escaped
+assert.strictEqual(htmlEscape('&'), '&amp;');
+assert.strictEqual(htmlEscape('"'), '&quot;');
+assert.strictEqual(htmlEscape("'"), '&#39;');
+assert.strictEqual(htmlEscape('<'), '&lt;');
+assert.strictEqual(htmlEscape('>'), '&gt;');
+console.log('PASS: htmlEscape escapes individual special characters');
+
+// Test: a god name with special chars cannot break out of the value attribute
+var dangerous = 'x" onmouseover="alert(1)';
+var escaped = htmlEscape(dangerous);
+assert.ok(escaped.indexOf('"') === -1, 'double quotes should be escaped');
+assert.ok(escaped.indexOf('&quot;') !== -1, 'double quotes should become &quot;');
+console.log('PASS: htmlEscape prevents attribute injection');
+
+// Test: plain names are returned unchanged
+assert.strictEqual(htmlEscape('mrded'), 'mrded');
+assert.strictEqual(htmlEscape(''), '');
+// Test: null/undefined inputs are handled gracefully
+assert.strictEqual(htmlEscape(null), '');
+assert.strictEqual(htmlEscape(undefined), '');
+console.log('PASS: htmlEscape leaves plain strings unchanged and handles null/undefined');
 
 console.log('\nAll tests passed.');

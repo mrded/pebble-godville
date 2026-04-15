@@ -1,4 +1,7 @@
-var GODVILLE_API_URL = 'https://godvillegame.com/gods/api/';
+var GODVILLE_REALMS = {
+  'en': 'https://godvillegame.com/gods/api/',
+  'ru': 'https://godville.net/gods/api/'
+};
 var UPDATE_INTERVAL = 5 * 60 * 1000; // 5 minutes
 
 var Keys = {
@@ -25,22 +28,37 @@ var Keys = {
   KEY_HERO_ARENA_FIGHT: 20
 };
 
+function htmlEscape(str) {
+  return String(str == null ? '' : str)
+    .replace(/&/g, '&amp;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
+
+function sendError(message) {
+  var errDict = {};
+  errDict[Keys.KEY_ERROR_MESSAGE] = message;
+  Pebble.sendAppMessage(errDict, function() {
+    console.log('Error message sent to Pebble');
+  }, function(error) {
+    console.log('Failed to send error message: ' + JSON.stringify(error));
+  });
+}
+
 function fetchHeroData() {
   // TODO: Remove default god name before release
   var godName = localStorage.getItem('godName') || 'mrded';
   if (!godName) {
     console.log('No god name set. Configure the app first.');
-    var errDict = {};
-    errDict[Keys.KEY_ERROR_MESSAGE] = 'Set god name in Settings';
-    Pebble.sendAppMessage(errDict, function() {
-      console.log('Error message sent to Pebble');
-    }, function(error) {
-      console.log('Failed to send error message: ' + JSON.stringify(error));
-    });
+    sendError('Set god name in Settings');
     return;
   }
 
-  var url = GODVILLE_API_URL + encodeURIComponent(godName) + '.json';
+  var realm = localStorage.getItem('realm') || 'en';
+  var apiUrl = GODVILLE_REALMS[realm] || GODVILLE_REALMS['en'];
+  var url = apiUrl + encodeURIComponent(godName) + '.json';
 
   var xhr = new XMLHttpRequest();
   xhr.open('GET', url, true);
@@ -51,13 +69,16 @@ function fetchHeroData() {
         sendDataToWatch(data);
       } catch (e) {
         console.log('Failed to parse Godville API response: ' + e);
+        sendError('Invalid API response');
       }
     } else {
       console.log('Godville API request failed: ' + xhr.status);
+      sendError('API error: ' + xhr.status);
     }
   };
   xhr.onerror = function() {
     console.log('Network error when fetching Godville data');
+    sendError('Network error');
   };
   xhr.send();
 }
@@ -104,13 +125,19 @@ Pebble.addEventListener('ready', function() {
 
 Pebble.addEventListener('showConfiguration', function() {
   var godName = localStorage.getItem('godName') || '';
+  var realm = localStorage.getItem('realm') || 'en';
   var configUrl = 'data:text/html,' + encodeURIComponent(
     '<html><body>' +
     '<h3>Godville</h3>' +
-    '<label>God name: <input id="name" value="' + godName + '"></label><br><br>' +
+    '<label>God name: <input id="name" value="' + htmlEscape(godName) + '"></label><br><br>' +
+    '<label>Realm: <select id="realm">' +
+      '<option value="en"' + (realm === 'en' ? ' selected' : '') + '>English (godvillegame.com)</option>' +
+      '<option value="ru"' + (realm === 'ru' ? ' selected' : '') + '>Russian (godville.net)</option>' +
+    '</select></label><br><br>' +
     '<button onclick="' +
       'var n=document.getElementById(\'name\').value;' +
-      'location.href=\'pebblejs://close#\'+encodeURIComponent(JSON.stringify({godName:n}));' +
+      'var r=document.getElementById(\'realm\').value;' +
+      'location.href=\'pebblejs://close#\'+encodeURIComponent(JSON.stringify({godName:n,realm:r}));' +
     '">Save</button>' +
     '</body></html>'
   );
@@ -121,9 +148,18 @@ Pebble.addEventListener('webviewclosed', function(e) {
   if (e.response) {
     try {
       var config = JSON.parse(decodeURIComponent(e.response));
+      var changed = false;
       if (config.godName) {
         localStorage.setItem('godName', config.godName);
         console.log('God name saved: ' + config.godName);
+        changed = true;
+      }
+      if (config.realm && GODVILLE_REALMS[config.realm]) {
+        localStorage.setItem('realm', config.realm);
+        console.log('Realm saved: ' + config.realm);
+        changed = true;
+      }
+      if (changed) {
         fetchHeroData();
       }
     } catch (err) {
@@ -133,5 +169,5 @@ Pebble.addEventListener('webviewclosed', function(e) {
 });
 
 if (typeof module !== 'undefined') {
-  module.exports = { fetchHeroData: fetchHeroData };
+  module.exports = { fetchHeroData: fetchHeroData, sendDataToWatch: sendDataToWatch, GODVILLE_REALMS: GODVILLE_REALMS, htmlEscape: htmlEscape };
 }
