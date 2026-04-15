@@ -22,6 +22,7 @@ static TextLayer *s_name_layer;
 static TextLayer *s_level_class_layer;
 static TextLayer *s_stats_layer;      // HP + EXP on one line
 static TextLayer *s_resources_layer;  // Gold + GP on one line
+static TextLayer *s_landscape_layer;  // Pokemon-style ASCII scene
 static TextLayer *s_quest_layer;
 static TextLayer *s_activity_layer;
 
@@ -159,44 +160,54 @@ static void main_window_load(Window *window) {
   int y = 0;
 
   // Time — centred, prominent
-  s_time_layer = text_layer_create(GRect(0, y, bounds.size.w, 32));
+  s_time_layer = text_layer_create(GRect(0, y, bounds.size.w, 28));
   text_layer_set_font(s_time_layer, fonts_get_system_font(FONT_KEY_GOTHIC_28_BOLD));
   text_layer_set_text_alignment(s_time_layer, GTextAlignmentCenter);
   text_layer_set_text(s_time_layer, "00:00");
   layer_add_child(window_layer, text_layer_get_layer(s_time_layer));
-  y += 32;
+  y += 28;
 
   // Hero name
-  s_name_layer = text_layer_create(GRect(2, y, width, 20));
+  s_name_layer = text_layer_create(GRect(2, y, width, 18));
   text_layer_set_font(s_name_layer, fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD));
   text_layer_set_text(s_name_layer, "Loading...");
   layer_add_child(window_layer, text_layer_get_layer(s_name_layer));
-  y += 20;
+  y += 18;
 
   // Level + class
-  s_level_class_layer = text_layer_create(GRect(2, y, width, 16));
+  s_level_class_layer = text_layer_create(GRect(2, y, width, 14));
   text_layer_set_font(s_level_class_layer, fonts_get_system_font(FONT_KEY_GOTHIC_14));
   layer_add_child(window_layer, text_layer_get_layer(s_level_class_layer));
-  y += 16;
+  y += 14;
 
   // HP + EXP
-  s_stats_layer = text_layer_create(GRect(2, y, width, 16));
+  s_stats_layer = text_layer_create(GRect(2, y, width, 14));
   text_layer_set_font(s_stats_layer, fonts_get_system_font(FONT_KEY_GOTHIC_14));
   layer_add_child(window_layer, text_layer_get_layer(s_stats_layer));
-  y += 16;
+  y += 14;
 
   // Gold + GP
-  s_resources_layer = text_layer_create(GRect(2, y, width, 16));
+  s_resources_layer = text_layer_create(GRect(2, y, width, 14));
   text_layer_set_font(s_resources_layer, fonts_get_system_font(FONT_KEY_GOTHIC_14));
   layer_add_child(window_layer, text_layer_get_layer(s_resources_layer));
-  y += 16;
+  y += 14;
+
+  // Pokemon-style ASCII landscape: mountains + hero sprite
+  s_landscape_layer = text_layer_create(GRect(2, y, width, 28));
+  text_layer_set_font(s_landscape_layer, fonts_get_system_font(FONT_KEY_GOTHIC_14));
+  text_layer_set_overflow_mode(s_landscape_layer, GTextOverflowModeWordWrap);
+  text_layer_set_text(s_landscape_layer,
+                      " /\\  * . *  /\\\n"
+                      "/  \\_(^)_/  \\/");
+  layer_add_child(window_layer, text_layer_get_layer(s_landscape_layer));
+  y += 28;
 
   // Quest (2 lines)
-  s_quest_layer = text_layer_create(GRect(2, y, width, 32));
+  s_quest_layer = text_layer_create(GRect(2, y, width, 28));
   text_layer_set_font(s_quest_layer, fonts_get_system_font(FONT_KEY_GOTHIC_14));
   text_layer_set_overflow_mode(s_quest_layer, GTextOverflowModeWordWrap);
   layer_add_child(window_layer, text_layer_get_layer(s_quest_layer));
-  y += 32;
+  y += 28;
 
   // Last diary entry — fills remaining space
   s_activity_layer = text_layer_create(GRect(2, y, width, bounds.size.h - y - 2));
@@ -219,6 +230,7 @@ static void main_window_unload(Window *window) {
   text_layer_destroy(s_level_class_layer);
   text_layer_destroy(s_stats_layer);
   text_layer_destroy(s_resources_layer);
+  text_layer_destroy(s_landscape_layer);
   text_layer_destroy(s_quest_layer);
   text_layer_destroy(s_activity_layer);
 }
